@@ -105,6 +105,12 @@ cd frontend && npm run typecheck && npm run build
 4. 前端有 **mock 兜底**：后端未启动时用 `frontend/src/fixtures/*.json` 照常演示，并在界面顶部标注「离线演示数据」。
 5. 站点只监听 `127.0.0.1`，不涉及远程访问。
 
+## CI
+
+`ci/ci.yml` 是一份完整的 GitHub Actions 定义（后端 pytest + ruff + 算法自检，前端 npm ci + typecheck + build）。
+因为本机 gh 令牌没有 `workflow` 作用域，推送 `.github/workflows/` 会被 GitHub 拒绝，所以先放在 `ci/` 下；
+按该文件顶部注释里的一行命令即可启用。
+
 ## 已知限制
 
 - `outline` 状态的条目只有概念卡片，没有可调参的仿真（`simHint` 字段记录了后续要做的 3D 仿真设想）。
