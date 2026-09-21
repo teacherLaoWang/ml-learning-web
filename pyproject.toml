@@ -1,0 +1,43 @@
+[project]
+name = "ml-learning-web"
+version = "0.1.0"
+description = "机器学习交互式 3D 仿真学习站：FastAPI 后端真跑 NumPy/PyTorch + Vue3/three.js 前端"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "numpy>=1.26.0",
+    "pydantic>=2.8.0",
+    "uvicorn[standard]>=0.30.0",
+]
+
+# 可选「真训练」内核：uv sync --extra ml   （不装也能跑，自动退回纯 NumPy 实现）
+[project.optional-dependencies]
+ml = [
+    "torch>=2.2.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.27.0",
+    "pytest>=8.0.0",
+    "ruff>=0.6.0",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
+
+[tool.ruff.lint]
+extend-select = ["I"]
+# 教案里大量使用「隐式拼接的多行中文字符串」，ISC004/E501 属于风格噪音，不是缺陷
+ignore = ["ISC004", "E501", "BLE001", "E741"]
+
+[[tool.uv.index]]
+url = "https://mirrors.aliyun.com/pypi/simple/"
+default = true

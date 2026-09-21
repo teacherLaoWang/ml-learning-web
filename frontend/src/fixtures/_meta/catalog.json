@@ -1,0 +1,857 @@
+{
+ "env": {
+  "python": "3.12.13",
+  "numpy": "2.1.0",
+  "torch": {
+   "available": false,
+   "version": null,
+   "device": null
+  },
+  "hint": "离线演示数据（mock）：真实环境请启动后端。装可选内核：uv sync --extra ml"
+ },
+ "families": [
+  {
+   "key": "supervised",
+   "name": "监督学习",
+   "color": "#2563eb",
+   "blurb": "给定 (x, y) 学一个映射：标签连续 → 回归，标签离散 → 分类。",
+   "items": [
+    {
+     "key": "linreg",
+     "name": "线性回归",
+     "status": "ready",
+     "difficulty": 1,
+     "tags": [
+      "回归",
+      "最小二乘",
+      "梯度下降",
+      "闭式解"
+     ],
+     "tagline": "用一条直线（超平面）拟合连续标签"
+    },
+    {
+     "key": "logreg",
+     "name": "逻辑回归",
+     "status": "ready",
+     "difficulty": 1,
+     "tags": [
+      "分类",
+      "Sigmoid",
+      "交叉熵",
+      "正则化"
+     ],
+     "tagline": "线性打分 + Sigmoid = 概率"
+    },
+    {
+     "key": "knn",
+     "name": "K 近邻",
+     "status": "ready",
+     "difficulty": 1,
+     "tags": [
+      "惰性学习",
+      "距离度量",
+      "维度灾难"
+     ],
+     "tagline": "不训练，只记住数据"
+    },
+    {
+     "key": "tree",
+     "name": "决策树",
+     "status": "ready",
+     "difficulty": 2,
+     "tags": [
+      "信息增益",
+      "Gini",
+      "剪枝",
+      "可解释"
+     ],
+     "tagline": "一连串 if 切出来的空间长方体"
+    },
+    {
+     "key": "svm",
+     "name": "支持向量机",
+     "status": "ready",
+     "difficulty": 3,
+     "tags": [
+      "最大间隔",
+      "核技巧",
+      "软间隔",
+      "对偶"
+     ],
+     "tagline": "只有边界上的点在说话"
+    },
+    {
+     "key": "naivebayes",
+     "name": "朴素贝叶斯",
+     "status": "outline",
+     "difficulty": 2,
+     "tags": [
+      "贝叶斯定理",
+      "条件独立",
+      "文本分类"
+     ],
+     "tagline": "假设特征互相独立，快得离谱还能用",
+     "concept": {
+      "story": "把「先验 × 似然」当成分类器：训练就是数词频。独立性假设明显是假的（所谓 naive），但只要相对大小对，argmax 就对——这是它至今仍是文本分类基线的原因。",
+      "intuition": [
+       "拉普拉斯平滑解决「没见过的词 → 概率 0」：分子加 α、分母加 α·V，α 越大越向均匀分布收缩。",
+       "连乘会下溢，所以工程上永远在 log 域做加法；分类变成「每个类别一个线性打分」。"
+      ],
+      "pitfalls": [
+       "现象：长文档效果突然变差 → 没做长度归一化，log 概率天然偏向短文本。",
+       "现象：罕见类别预测不出来 → 先验被多数类压死，要么重采样要么改类别权重。"
+      ]
+     }
+    },
+    {
+     "key": "ridge",
+     "name": "岭回归与 Lasso",
+     "status": "outline",
+     "difficulty": 2,
+     "tags": [
+      "L2",
+      "L1",
+      "稀疏解",
+      "偏差方差"
+     ],
+     "tagline": "给权重加惩罚，用一点偏差换大量方差",
+     "concept": {
+      "story": "正则化就是「模型复杂度要付费」：岭罚 Σw²（各向同性先验），Lasso 罚 Σ|w|（尖峰先验）。L1 的菱形可行域容易把解顶在坐标轴上，于是稀疏——这就是「Lasso 会选特征、岭不会」的几何解释。",
+      "intuition": [
+       "λ 必须用交叉验证选；把 λ 当超参手调，等于把模型选择又送回主观。",
+       "惩罚之前必须先标准化，否则大尺度特征被罚得最狠，纯属冤案。"
+      ],
+      "pitfalls": [
+       "现象：加了 L2 后系数都很小但预测变差 → λ 太大，模型已经退化成「预测均值」。",
+       "现象：共线性下 Lasso 只随机留一个特征 → 想要都留就用 ElasticNet。"
+      ]
+     }
+    },
+    {
+     "key": "isotonic",
+     "name": "保序回归与校准",
+     "status": "outline",
+     "difficulty": 3,
+     "tags": [
+      "概率校准",
+      "Platt",
+      "单调"
+     ],
+     "tagline": "模型说的是「分」，不是「概率」",
+     "concept": {
+      "story": "分类器的分数排序可能很好（AUC 高），但 0.8 不代表 80% 发生概率。保序回归拟合一条单调阶梯函数把分数映射到概率；Platt（sigmoid）是它的参数化简化版，样本少时更稳。",
+      "intuition": [
+       "校准必须用与选参不同的数据（或折外预测），否则是自证清白。",
+       "排序类指标（AUC/PR）对单调变换不敏感，所以只看 AUC 永远不会发现校准差。"
+      ],
+      "pitfalls": [
+       "现象：Brier 很大但 AUC 不错 → 典型「排序好、概率烂」，需要校准层。"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "key": "unsupervised",
+   "name": "无监督学习",
+   "color": "#7c3aed",
+   "blurb": "没有标签，找结构：聚类、密度、低维流形。",
+   "items": [
+    {
+     "key": "kmeans",
+     "name": "K-Means 聚类",
+     "status": "ready",
+     "difficulty": 1,
+     "tags": [
+      "EM 思想",
+      "肘部法则",
+      "K-Means++"
+     ],
+     "tagline": "交替优化：分配 → 求心"
+    },
+    {
+     "key": "pca",
+     "name": "主成分分析",
+     "status": "ready",
+     "difficulty": 2,
+     "tags": [
+      "特征分解",
+      "方差最大化",
+      "降维"
+     ],
+     "tagline": "把数据转到方差最大的正交基上"
+    },
+    {
+     "key": "tsne",
+     "name": "t-SNE 流形可视化",
+     "status": "ready",
+     "difficulty": 4,
+     "tags": [
+      "概率嵌入",
+      "困惑度",
+      "KL 散度"
+     ],
+     "tagline": "只保证邻居，别读距离"
+    },
+    {
+     "key": "gmm",
+     "name": "高斯混合模型",
+     "status": "outline",
+     "difficulty": 3,
+     "tags": [
+      "EM",
+      "软聚类",
+      "协方差"
+     ],
+     "tagline": "给每个簇一个椭圆而不是圆",
+     "concept": {
+      "story": "K-Means 是 GMM 的特例（各协方差为 σ²I 且责任非 0 即 1）。GMM 用软责任，EM 的 E 步算后验、M 步重估参数，似然单调不降。",
+      "intuition": [
+       "协方差矩阵退化时似然会冲到无穷：给对角加 εI，或限制为 tied/球形协方差。",
+       "BIC/AIC 选成分数，不要看「簇看起来圆不圆」。"
+      ],
+      "pitfalls": [
+       "现象：某一簇收缩到单个点上 → 协方差奇异，典型 GMM 崩塌。"
+      ]
+     }
+    },
+    {
+     "key": "dbscan",
+     "name": "DBSCAN 密度聚类",
+     "status": "outline",
+     "difficulty": 2,
+     "tags": [
+      "ε 邻域",
+      "噪声点",
+      "任意形状"
+     ],
+     "tagline": "连通密度即可，不需要假设形状",
+     "concept": {
+      "story": "核心点的 ε 邻域里至少要有 minPts 个邻居；把互相密度可达的点连通起来就是一簇，剩下的都是噪声。于是能找出月牙形、环形，K-Means 完全做不到。",
+      "intuition": [
+       "ε 和 minPts 一起决定粒度和算力，别当成「簇数」调。",
+       "密度不均的数据要换 HDBSCAN（对 ε 更不敏感）。"
+      ],
+      "pitfalls": [
+       "现象：所有点被连成一簇 → ε 太大；全都成噪声 → ε 太小。用 k-距离图选 ε。"
+      ]
+     }
+    },
+    {
+     "key": "hierarchical",
+     "name": "层次聚类",
+     "status": "outline",
+     "difficulty": 2,
+     "tags": [
+      "树状图",
+      "单链/全链",
+      "Ward"
+     ],
+     "tagline": "一次算出所有粒度",
+     "concept": {
+      "story": "自底向上不断合并最近的两簇，得到一棵 dendrogram；链接方式（single/complete/average/Ward）定义了什么叫「最近的簇」。切一刀就是聚类，粒度可选。",
+      "intuition": [
+       "Ward 最小化簇内平方和，与 K-Means 目标同源；single 容易产生「链效应」。"
+      ],
+      "pitfalls": [
+       "现象：聚类结果是一条长链串起所有点 → single linkage 的链效应，改 average/Ward。"
+      ]
+     }
+    },
+    {
+     "key": "umap",
+     "name": "UMAP",
+     "status": "outline",
+     "difficulty": 4,
+     "tags": [
+      "流形假设",
+      "模糊单纯复形",
+      "保持全局"
+     ],
+     "tagline": "比 t-SNE 快，还能解释新点",
+     "concept": {
+      "story": "用 kNN 图 + 边权的模糊单纯复形刻画高维拓扑，再用交叉熵把这张图压到低维。n_neighbors 控制看多局部，min_dist 控制簇内松紧。",
+      "intuition": [
+       "有 transform()，可以把训练好的映射套到新样本上（t-SNE 不行）。",
+       "低维距离仍不可直接解读，但簇间相对布局比 t-SNE 可信。"
+      ],
+      "pitfalls": [
+       "现象：改变 min_dist 后「簇数」变了 → 那不是新发现，是超参在讲不同的故事。"
+      ]
+     }
+    },
+    {
+     "key": "fa",
+     "name": "因子分析与 LDA",
+     "status": "outline",
+     "difficulty": 4,
+     "tags": [
+      "潜变量",
+      "主题模型",
+      "共轭"
+     ],
+     "tagline": "观测是几个公共因子的线性组合",
+     "concept": {
+      "story": "因子分析 = PCA 换了一种噪声假设：协方差 = ΛΛᵀ + Ψ，把「公共方差」和「唯一性方差」分开。LDA 是它在文本上的概率版本：文档是主题的混合，主题是词的分布。",
+      "intuition": [
+       "因子个数用解释方差比例 / BIC 选，别为「好看」硬凑。"
+      ],
+      "pitfalls": [
+       "现象：主题里混进一串无关联的通用词 → 语料没去停用词，或 K 太小。"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "key": "ensemble",
+   "name": "集成学习",
+   "color": "#0d9488",
+   "blurb": "一群弱学习器：并行降方差（Bagging），串行降偏差（Boosting）。",
+   "items": [
+    {
+     "key": "bagging",
+     "name": "Bagging 与随机森林",
+     "status": "outline",
+     "difficulty": 2,
+     "tags": [
+      "自助采样",
+      "特征随机",
+      "方差"
+     ],
+     "tagline": "让每个模型看到的都不完全一样",
+     "concept": {
+      "story": "深树单棵方差极大（换个样本就换形状）。自助采样 + 每步随机特征子集，把误差里互不相关的部分平均掉：方差 ∝ σ²/n，但相关性会封住收益。",
+      "intuition": [
+       "OOB 样本是免费的验证集，可以顺手算误差和置换重要性。"
+      ],
+      "pitfalls": [
+       "现象：树加到 500 棵还在过拟合 → 数据里有噪声且树太深，限制 min_samples_leaf。"
+      ]
+     }
+    },
+    {
+     "key": "gbdt",
+     "name": "梯度提升 GBDT",
+     "status": "outline",
+     "difficulty": 3,
+     "tags": [
+      "函数空间梯度",
+      "残差拟合",
+      "学习率"
+     ],
+     "tagline": "串行纠错，每棵树拟合当前残差",
+     "concept": {
+      "story": "把模型当函数：Fₘ = Fₘ₋₁ + η·hₘ，hₘ 去拟合负梯度（对 MSE 就是残差）。学习率越小、树越多，所以要早停。",
+      "intuition": [
+       "列采样 + 直方图分箱是工程上让 GBDT 变快的关键。"
+      ],
+      "pitfalls": [
+       "现象：训练损失一直降但验证损失不动 → 加正则（叶子数、min_child_weight）或降 η。"
+      ]
+     }
+    },
+    {
+     "key": "xgboost",
+     "name": "XGBoost / LightGBM",
+     "status": "outline",
+     "difficulty": 4,
+     "tags": [
+      "二阶近似",
+      "正则树",
+      "工程优化"
+     ],
+     "tagline": "把目标二阶展开，并把复杂度写进损失",
+     "concept": {
+      "story": "XGBoost 在损失里显式加了 γ·T + ½λΣw²，分裂增益有闭式公式；LightGBT 用直方图 + Leaf-wise 生长 + GOSS，速度快、内存省。",
+      "intuition": [
+       "Leaf-wise 深而不平衡，小数据集容易过拟合，要配 max_depth。"
+      ],
+      "pitfalls": [
+       "现象：换机器结果不一样 → 多线程直方图构建本身不确定，需要固定 deterministic 开关。"
+      ]
+     }
+    },
+    {
+     "key": "stacking",
+     "name": "Stacking 与 Blending",
+     "status": "outline",
+     "difficulty": 3,
+     "tags": [
+      "元学习器",
+      "泄漏",
+      "折外预测"
+     ],
+     "tagline": "让模型学会何时相信谁",
+     "concept": {
+      "story": "第一层模型的输出当作第二层的特征。关键：这些特征必须是折外（OOF）预测，否则元学习器学到的就是「第一层记住了训练集」这件事。",
+      "intuition": [
+       "元学习器越简单越稳（逻辑回归即可）。"
+      ],
+      "pitfalls": [
+       "现象：线下提升巨大、线上归零 → 十有八九是用了训练集内预测，泄漏了。"
+      ]
+     }
+    },
+    {
+     "key": "voting",
+     "name": "投票与加权平均",
+     "status": "outline",
+     "difficulty": 1,
+     "tags": [
+      "硬投票",
+      "软投票",
+      "多样性"
+     ],
+     "tagline": "最简单也最常有效的集成",
+     "concept": {
+      "story": "硬投票数票，软投票平均概率。理论前提是成员模型都比随机好且误差尽量不相关；多样性比单个模型精度更值钱。",
+      "intuition": [
+       "概率没校准（如 SVM 输出不是概率）时，软投票会被大尺度的模型主导，改用硬投票或先校准。"
+      ],
+      "pitfalls": [
+       "现象：集成没变好 → 成员同源（同一份数据同一类模型），误差完全相关。"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "key": "deep",
+   "name": "深度学习",
+   "color": "#ea580c",
+   "blurb": "可微分编程：多层非线性 + 反向传播 + 大规模优化。",
+   "items": [
+    {
+     "key": "mlp",
+     "name": "多层感知机与反向传播",
+     "status": "ready",
+     "difficulty": 3,
+     "tags": [
+      "链式法则",
+      "梯度下降",
+      "激活函数",
+      "MSE"
+     ],
+     "tagline": "最小可教网络：两层非线性 + 链式法则"
+    },
+    {
+     "key": "cnn",
+     "name": "卷积神经网络",
+     "status": "ready",
+     "difficulty": 4,
+     "tags": [
+      "局部感受野",
+      "权值共享",
+      "池化",
+      "特征图"
+     ],
+     "tagline": "用局部性与共享把参数压下来"
+    },
+    {
+     "key": "optim",
+     "name": "优化器：动量 / Adam / 学习率",
+     "status": "outline",
+     "difficulty": 3,
+     "tags": [
+      "SGD",
+      "Momentum",
+      "AdamW",
+      "Warmup"
+     ],
+     "tagline": "同样梯度，走法差十倍速度",
+     "concept": {
+      "story": "动量在平坦方向累速度、陡方向互相抵消，专治「之字形」；Adam 用梯度平方的移动平均做逐参数缩放，对学习率不敏感，但泛化常不如调好的 SGD+Momentum。AdamW 把权重衰减从梯度里解耦出来，这才是真正的 L2。",
+      "intuition": [
+       "Warmup + 余弦衰减是大 batch 训练的标配。",
+       "梯度裁剪（按范数）只治尖峰，不治发散。"
+      ],
+      "pitfalls": [
+       "现象：loss 突然尖峰 → 数据里有脏样本或 lr 太大，先降 lr 再查数据。"
+      ]
+     }
+    },
+    {
+     "key": "normalization",
+     "name": "BatchNorm 与 LayerNorm",
+     "status": "outline",
+     "difficulty": 3,
+     "tags": [
+      "内部协变量",
+      "归一化",
+      "残差"
+     ],
+     "tagline": "把每层输入拉回好条件数的分布",
+     "concept": {
+      "story": "BN 在 batch 维归一化，用运行统计量做推理；LN 在特征维归一化，与 batch 无关，所以序列模型/小 batch 用 LN。本质上它们是重新参数化：让每个尺度有独立的学习率。",
+      "intuition": [
+       "推理与训练行为不同（running stats / dropout），写测试要小心。",
+       "残差 + 归一化的顺序影响很深，pre-norm 更容易训深。"
+      ],
+      "pitfalls": [
+       "现象：训练好、线上崩 → batch 太小导致 BN 统计噪声大，换 GN/LN 或增大 batch。"
+      ]
+     }
+    },
+    {
+     "key": "rnn",
+     "name": "RNN / LSTM / GRU",
+     "status": "outline",
+     "difficulty": 4,
+     "tags": [
+      "时序依赖",
+      "梯度消失",
+      "门控"
+     ],
+     "tagline": "一条会忘记的循环",
+     "concept": {
+      "story": "每步同一组权重复用 → 梯度要连乘 T 次，于是长依赖要么消失要么爆炸。LSTM 用加法门控制的记忆线（c 只被加，不被乘）绕开连乘，GRU 用两门简化版达到相近效果。",
+      "intuition": [
+       "双向只在离线任务可用；截断反向传播是工程必然。"
+      ],
+      "pitfalls": [
+       "现象：长序列上 loss 降到 2.3 就不动（≈ ln(10)）→ 模型退化成均匀猜测。"
+      ]
+     }
+    },
+    {
+     "key": "transformer",
+     "name": "Transformer 与注意力",
+     "status": "outline",
+     "difficulty": 5,
+     "tags": [
+      "QKV",
+      "多头",
+      "位置编码",
+      "自回归"
+     ],
+     "tagline": "用全连接的注意力换掉循环",
+     "concept": {
+      "story": "Attention(Q,K,V)=softmax(QKᵀ/√d)V：每个位置直接查询所有位置，路径长度 O(1)，代价是 O(n²) 的算力与内存。多头是不同子空间的并行查询；没有循环就必须显式注入位置信息。",
+      "intuition": [
+       "√d 是为了让点积方差归一，否则 softmax 会饱和。",
+       "KV Cache 是自回归推理的关键优化。"
+      ],
+      "pitfalls": [
+       "现象：换成 padding=max 后结果抖动 → 没做 mask，注意力看了填充位。"
+      ]
+     }
+    },
+    {
+     "key": "autoencoder",
+     "name": "自编码器",
+     "status": "outline",
+     "difficulty": 3,
+     "tags": [
+      "瓶颈层",
+      "重构损失",
+      "生成"
+     ],
+     "tagline": "压缩即理解（也许）",
+     "concept": {
+      "story": "编码器把 x 压到 z，解码器再重建。瓶颈维度、稀疏约束、噪声注入决定它学到的是特征还是恒等映射。VAE 额外约束 q(z|x) 接近先验，于是 z 可采样、可生成。",
+      "intuition": [
+       "重构误差低不代表表征好（自恒等映射也很低）。"
+      ],
+      "pitfalls": [
+       "现象：z 坍缩成常数 → KL 权重太大，β 退火或上 free-bits。"
+      ]
+     }
+    },
+    {
+     "key": "gan",
+     "name": "生成对抗网络",
+     "status": "outline",
+     "difficulty": 5,
+     "tags": [
+      "极小极大",
+      "模式崩溃",
+      "判别器"
+     ],
+     "tagline": "两个网络互相逼出彼此的上限",
+     "concept": {
+      "story": "生成器骗判别器、判别器抓伪造。理论最优是数据分布与生成分布不可区分，实践中最难的是训练平衡：判别器太强 → 生成器梯度消失；太弱 → 崩到少数模式。",
+      "intuition": [
+       "标签平滑、双时间尺度更新、谱归一化都是为了稳住这个博弈。"
+      ],
+      "pitfalls": [
+       "现象：FID 很好但样本千篇一律 → 模式崩溃，多样性指标（Recall/覆盖）必须一起看。"
+      ]
+     }
+    },
+    {
+     "key": "diffusion",
+     "name": "扩散模型",
+     "status": "outline",
+     "difficulty": 5,
+     "tags": [
+      "加噪/去噪",
+      "Score",
+      "DDPM"
+     ],
+     "tagline": "把生成变成一步步去噪",
+     "concept": {
+      "story": "前向把数据逐步加高斯噪直到纯噪声；模型学的是每步的 score ∇log p(xₜ)（或预测噪声 ε），反向逐步采样回去。训练目标极简（MSE），代价是推理要几十到上千步。",
+      "intuition": [
+       "DDIM / 蒸馏把步数压下来；CFG 用条件与无条件之差换可控性。"
+      ],
+      "pitfalls": [
+       "现象：加大 CFG 后图像更「炸」但细节假 → 权重过大偏离真实分布。"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "key": "evaluation",
+   "name": "评估与调参",
+   "color": "#db2777",
+   "blurb": "模型好不好，取决于你问问题的方式：划分、指标、显著性。",
+   "items": [
+    {
+     "key": "biasvariance",
+     "name": "偏差-方差与过拟合",
+     "status": "outline",
+     "difficulty": 2,
+     "tags": [
+      "学习曲线",
+      "容量",
+      "正则"
+     ],
+     "tagline": "误差拆成两笔：模型太简 vs 太敏感",
+     "concept": {
+      "story": "总误差 = 偏差² + 方差 + 噪声。容量上升 → 偏差降、方差升，验证误差是 U 形。学习曲线直接把两种情形分开：两条线都高且贴近 = 高偏差；训练很低验证很高且差距大 = 高方差。",
+      "intuition": [
+       "更多数据只治方差；治偏差要更强模型或更好特征。"
+      ],
+      "pitfalls": [
+       "现象：加数据没提升 → 模型欠拟合，先提容量再谈数据。"
+      ]
+     }
+    },
+    {
+     "key": "metrics",
+     "name": "分类指标：AUC / F1 / 混淆矩阵",
+     "status": "outline",
+     "difficulty": 2,
+     "tags": [
+      "精确率",
+      "召回率",
+      "ROC",
+      "PR 曲线"
+     ],
+     "tagline": "指标选错，一切白做",
+     "concept": {
+      "story": "不平衡数据下准确率会被多数类骗：99% 负样本时全猜 0 就有 99% 准确率。ROC 在负样本剧增时看着很美（FPR 分母大），PR 曲线才诚实；F1 只看正类，且与阈值绑定。",
+      "intuition": [
+       "先定业务代价（漏诊贵还是误报贵），再挑指标和阈值。"
+      ],
+      "pitfalls": [
+       "现象：AUC 提升但线上转化降 → 阈值是按旧分布定的，分布一漂移就失效。"
+      ]
+     }
+    },
+    {
+     "key": "cv",
+     "name": "交叉验证与数据划分",
+     "status": "outline",
+     "difficulty": 2,
+     "tags": [
+      "K 折",
+      "分层",
+      "泄漏"
+     ],
+     "tagline": "留出法要留出「未来」",
+     "concept": {
+      "story": "随机 K 折 + 分层是默认。真实数据里时间、用户、组会相关，随机划分等于把答案泄露给模型：必须按时间切（回测）、按 group 切（GroupKFold）。",
+      "intuition": [
+       "所有预处理（缩放、编码、特征选择、填缺失）都要放进 Pipeline，在每折内部拟合。"
+      ],
+      "pitfalls": [
+       "现象：CV 分数远高于线上 → 十有八九是全局标准化/全局编码导致的泄漏。"
+      ]
+     }
+    },
+    {
+     "key": "hpo",
+     "name": "超参数搜索",
+     "status": "outline",
+     "difficulty": 2,
+     "tags": [
+      "网格",
+      "随机",
+      "贝叶斯优化"
+     ],
+     "tagline": "维度上去后网格就废了",
+     "concept": {
+      "story": "同样预算下随机搜索远胜网格，因为它隐式地在低维子空间采样。贝叶斯优化/ASHA（早停剪枝）把算力集中在有希望的点上，但要求目标大致光滑。",
+      "intuition": [
+       "搜索空间要用对数尺度定义 lr、λ 这类跨数量级的参数。"
+      ],
+      "pitfalls": [
+       "现象：最优超参刚好落在边界上 → 空间设小了。"
+      ]
+     }
+    },
+    {
+     "key": "explain",
+     "name": "可解释性 SHAP / LIME",
+     "status": "outline",
+     "difficulty": 4,
+     "tags": [
+      "特征归因",
+      "局部代理",
+      "置换重要性"
+     ],
+     "tagline": "把模型的局部行为翻译给人看",
+     "concept": {
+      "story": "LIME 用一个局部线性代理拟合模型输出；SHAP 把这一思想推到唯一满足一致性公理的 Shapley 值分解，可加、可累计。树模型有精确树路径算法，快很多。",
+      "intuition": [
+       "归因 ≠ 因果；相关特征会把归因摊薄。"
+      ],
+      "pitfalls": [
+       "现象：背景分布选错了 → 所有归因都失真，必须用真实参考分布。"
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "key": "data",
+   "name": "特征工程与进阶范式",
+   "color": "#4f46e5",
+   "blurb": "数据决定上限，模型只是逼近它；以及换一种目标函数的 RL。",
+   "items": [
+    {
+     "key": "scaling",
+     "name": "标准化与编码",
+     "status": "outline",
+     "difficulty": 1,
+     "tags": [
+      "Z-score",
+      "MinMax",
+      "One-Hot",
+      "分位数"
+     ],
+     "tagline": "让每个特征在同一尺度上竞争",
+     "concept": {
+      "story": "梯度类与距离类模型对尺度极敏感（条件数、距离主导）；树类模型完全不受单调缩放影响。分位数/RobustScaler 专治长尾与离群点。",
+      "intuition": [
+       "统计量只能从训练折来；顺序重要：fit_transform 只在 train 上。"
+      ],
+      "pitfalls": [
+       "现象：One-Hot 高基数特征把维度炸了 → 目标编码或 embedding。"
+      ]
+     }
+    },
+    {
+     "key": "missing",
+     "name": "缺失值与异常值",
+     "status": "outline",
+     "difficulty": 1,
+     "tags": [
+      "MCAR/MNAR",
+      "插补",
+      "稳健缩放"
+     ],
+     "tagline": "缺失本身常常是信息",
+     "concept": {
+      "story": "MCAR 可随机删；MAR 要条件建模；MNAR（缺失与真值有关）最好把「缺失指示」当特征。KNN/多重插补保留相关性，中位数插补便宜稳健。",
+      "intuition": [
+       "插补统计量必须在折内学，否则泄漏。"
+      ],
+      "pitfalls": [
+       "现象：删了 30% 行还没法用 → 缺失有结构性原因，改成指示 + 插补。"
+      ]
+     }
+    },
+    {
+     "key": "featuresel",
+     "name": "特征选择",
+     "status": "outline",
+     "difficulty": 2,
+     "tags": [
+      "过滤法",
+      "包裹法",
+      "互信息"
+     ],
+     "tagline": "少而准的特征胜过多而杂",
+     "concept": {
+      "story": "过滤法（相关/互信息/卡方）便宜且与模型无关；包裹法（RFE、前向选择）贴合模型但容易过拟合到 CV；嵌入法（L1、树重要性）边训边选。",
+      "intuition": [
+       "树模型的重要性有偏（高基数特征占便宜），用置换重要性更公道。"
+      ],
+      "pitfalls": [
+       "现象：选完特征 CV 分数暴涨 → 选择步骤没在折内做，泄漏。"
+      ]
+     }
+    },
+    {
+     "key": "imbalanced",
+     "name": "类别不平衡",
+     "status": "outline",
+     "difficulty": 2,
+     "tags": [
+      "重采样",
+      "类别权重",
+      "Focal Loss"
+     ],
+     "tagline": "别急着过采样，先问代价",
+     "concept": {
+      "story": "class_weight 等价于重加权损失；SMOTE 在少数类之间插值（有噪声时会把噪声也插进去）。Focal Loss 降低易分样本的权重，把注意力推给难样本。",
+      "intuition": [
+       "过采样只能在对训练折做，验证集必须保持真实分布。",
+       "阈值是免费的第二旋钮：重训之前先挪阈值。"
+      ],
+      "pitfalls": [
+       "现象：AUC 好但召回率低 → 用了 0.5 这个和业务无关的默认阈值。"
+      ]
+     }
+    },
+    {
+     "key": "rl",
+     "name": "强化学习入门",
+     "status": "outline",
+     "difficulty": 4,
+     "tags": [
+      "MDP",
+      "价值函数",
+      "策略梯度",
+      "探索利用"
+     ],
+     "tagline": "只有奖励信号，而且延迟",
+     "concept": {
+      "story": "环境是 MDP (S,A,P,R,γ)。价值函数满足贝尔曼方程；Q-learning 用 max 自举（离策略），策略梯度直接对回报求梯度（在策略）。ε-greedy 与熵奖励是探索的两种做法。",
+      "intuition": [
+       "奖励塑形极易导致「钻空子」策略；先做简单基线（随机/贪心）。"
+      ],
+      "pitfalls": [
+       "现象：loss 降但行为变差 → 奖励函数与设计目标不一致。"
+      ]
+     }
+    },
+    {
+     "key": "causal",
+     "name": "因果推断基础",
+     "status": "outline",
+     "difficulty": 5,
+     "tags": [
+      "混杂",
+      "干预",
+      "双重稳健"
+     ],
+     "tagline": "从「相关」到「做了会怎样」",
+     "concept": {
+      "story": "do 算子与观测条件概率不同：混杂路径会把伪相关带进来。识别策略包括后门调整、倾向得分匹配/加权、工具变量、双重稳健估计（AIPW）；DML 用机器学习去掉 nuisance 的偏差。",
+      "intuition": [
+       "先画 DAG，再谈估计量；调整集选错，估的就是有偏量。"
+      ],
+      "pitfalls": [
+       "现象：模型精度很高但 ATE 离谱 → 把中介/对撞变量也调了。"
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

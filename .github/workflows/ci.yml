@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: 安装依赖（只装 NumPy 主内核，torch 是可选 extra）
+        run: uv sync
+      - name: 测试
+        run: uv run pytest -q
+      - name: 代码风格
+        run: uv run ruff check app tests tools
+      - name: 10 个算法自检（visual 齐全、无 NaN/Inf）
+        run: uv run python -m tools.probe
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: 安装依赖
+        working-directory: frontend
+        run: npm ci
+      - name: 类型检查
+        working-directory: frontend
+        run: npm run typecheck
+      - name: 构建
+        working-directory: frontend
+        run: npm run build

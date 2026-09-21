@@ -1,0 +1,25 @@
+{
+  "name": "ml-learning-web-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "机器学习 3D 交互学习站前端：Vue 3 + Vite + three.js，完全离线可演示",
+  "scripts": {
+    "dev": "vite --port 5173 --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --port 4173 --host 127.0.0.1",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "three": "0.186.0",
+    "vue": "^3.5.43",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@types/three": "0.186.0",
+    "@vitejs/plugin-vue": "^6.0.9",
+    "typescript": "~5.9.3",
+    "vite": "^7.3.6",
+    "vue-tsc": "^3.3.11"
+  }
+}
