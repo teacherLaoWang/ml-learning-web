@@ -42,6 +42,9 @@ jobs:
       - name: 类型检查
         working-directory: frontend
         run: npm run typecheck
+      - name: 全部公式都能被 KaTeX 排版（严格模式，抓坏 LaTeX）
+        working-directory: frontend
+        run: node ../tools/check_tex.mjs
       - name: 构建
         working-directory: frontend
         run: npm run build

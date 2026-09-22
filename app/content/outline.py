@@ -196,6 +196,7 @@ OUTLINE: dict[str, dict[str, Any]] = {
         ),
         "formula": {
             "text": "p(x) = Σₖ πₖ·N(x | μₖ, Σₖ)　　γ_ik = πₖ·N(xᵢ|μₖ,Σₖ) / Σⱼ πⱼ·N(xᵢ|μⱼ,Σⱼ)　　Σₖπₖ = 1",
+            "latex": r"\begin{aligned}&& p(\mathbf{x}) &= \sum_{k}\pi_k\,\mathcal{N}(\mathbf{x}\mid \boldsymbol{\mu}_k, \boldsymbol{\Sigma}_k)\\ && \gamma_{ik} &= \frac{\pi_k\mathcal{N}(\mathbf{x}_i\mid\boldsymbol{\mu}_k,\boldsymbol{\Sigma}_k)}{\sum_{j}\pi_j\mathcal{N}(\mathbf{x}_i\mid\boldsymbol{\mu}_j,\boldsymbol{\Sigma}_j)}, \qquad \sum_{k}\pi_k = 1\end{aligned}",
             "vars": [
                 {"sym": "πₖ", "zh": "第 k 个分量的混合权重（先验概率），E 步里等于 γ 的平均"},
                 {"sym": "μₖ, Σₖ", "zh": "第 k 个高斯的均值与协方差；Σₖ 决定椭圆的朝向和胖瘦"},

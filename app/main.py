@@ -13,6 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.api.ask import router as ask_router
 from app.api.routes import router as api_router
 from app.content import catalog, loader
 
@@ -34,6 +35,7 @@ app.add_middleware(
 )
 
 app.include_router(api_router)
+app.include_router(ask_router)
 
 
 @app.get("/api/summary")

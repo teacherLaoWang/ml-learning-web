@@ -343,14 +343,18 @@ export interface FitResult {
 
 export interface FormulaVar {
   sym: string
+  /** sym 的 LaTeX 形式（后端 loader 转录或教案手写），空则回退显示 sym */
+  latex?: string
   zh: string
   /** §4：公式要配「代入真实数字的算例」 */
   example?: string
 }
 
 export interface Formula {
+  /** 教案原文，Unicode 写法，也是 latex 缺失时的回退显示 */
   text: string
-  latexish?: string
+  /** KaTeX 源码；displayMode 渲染 */
+  latex?: string
   vars: FormulaVar[]
 }
 
@@ -358,6 +362,7 @@ export interface DerivationStep {
   title: string
   body: string
   formula?: string
+  latex?: string
 }
 
 export interface Term {

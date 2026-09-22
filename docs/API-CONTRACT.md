@@ -40,9 +40,9 @@
  "key":"linreg","name":"线性回归","family":"supervised","status":"ready",
  "tagline":"用一条直线/超平面去拟合连续标签",
  "story":"从高斯的最小二乘（1805）到今天的回归基线……",
- "formula":{"text":"ŷ = w·x + b","latexish":"","vars":[{"sym":"w","zh":"权重（斜率）"},{"sym":"b","zh":"偏置（截距）"}]},
+ "formula":{"text":"ŷ = w·x + b","latex":"\\hat{y} = w\\cdot x + b","vars":[{"sym":"w","latex":"w","zh":"权重（斜率）"},{"sym":"b","latex":"b","zh":"偏置（截距）"}]},
  "intuition":["段落一","段落二"],
- "derivation":[{"title":"损失函数","body":"说明文字","formula":"MSE = (1/n)Σ(ŷᵢ − yᵢ)²"}],
+ "derivation":[{"title":"损失函数","body":"说明文字","formula":"MSE = (1/n)Σ(ŷᵢ − yᵢ)²","latex":"L = \\frac{1}{n}\\sum_{i}(\\hat{y}_i - y_i)^2"}],
  "terms":[{"term":"OLS","full":"Ordinary Least Squares","explain":"普通最小二乘……"}],
  "params":[{"id":"lr","label":"学习率 η","min":0.001,"max":1.0,"step":0.001,"default":0.1,"hint":"太大发散"}],
  "presets":[{"id":"demo","label":"演示","params":{"lr":0.1}}],
@@ -71,6 +71,28 @@
  "visuals":[ /* 见 §2 */ ]
 }
 ```
+
+### GET /api/ask/status 与 POST /api/ask
+
+「问助教」需要后端装 `--extra ai` 且有凭证（`QODER_PERSONAL_ACCESS_TOKEN` 或本机 `qodercli login`）。
+
+```json
+// GET /api/ask/status
+{"ready":true,"sdkInstalled":true,"mode":"pat","model":"auto","note":"答案由大模型生成…以正文为准。"}
+// 没配好时：{"ready":false,"sdkInstalled":true,"reason":"未配置凭证：设置环境变量 …"}
+```
+
+```json
+// POST /api/ask —— 只发定位，不发正文；正文由服务端从 loader 取
+{"key":"logreg","section":{"kind":"derivation","index":2},
+ "question":"为什么梯度里消掉了 σ′？","params":{"lr":0.1},"history":[{"role":"user","text":"…"}]}
+```
+
+响应是 `text/event-stream`，每帧一行 `data: {json}`：
+`{"type":"delta","text":"…"}` → `{"type":"done","turns":1,"ms":1234,"costUsd":0.004}`，
+出错则 `{"type":"error","message":"…"}`（503 = 未配置凭证，404 = key/小节不存在）。
+`section.kind` ∈ `story | formula | intuition | derivation | term | pitfall | visual | param | page`，
+其中数组类的要带 `index`，`term` 带 `term`，`visual`/`param` 带 `id`。
 
 ## 2. visual 负载（`visuals[]` 每项 = `{id, kind, title, hint?, data}`）
 
@@ -147,9 +169,28 @@
 2. 动画必须由时间驱动（`requestAnimationFrame` 推进插值/相位），不得只换颜色；页面不可见时自动暂停以省电。
 3. 关键词（NN/SGD/MSE/Gini…）统一走 `TermTip`：悬浮即解释，且自动避让视口边缘。
 4. 所有 `visual` 面板支持 `mock` 模式：`frontend/src/fixtures/{key}.json` 与 `/fit` 响应结构完全一致，后端未启动时前端仍可离线演示。
+5. 数学一律走 KaTeX（本地打包，不引 CDN）：`formula.latex` / `derivation[].latex` 用 displayMode 渲染，正文与 `vars[].latex` 用行内渲染；`latex` 为空时回退成等宽原文，禁止把 Unicode 上标（`ŷᵢ²`）当公式直接显示。
+6. 任何正文字符串（`story` / `tagline` / `intuition[]` / `derivation[].body` / `terms[].explain`）都可以用 `$...$` 夹行内公式，由 `LessonText` 切出来交给 KaTeX；`$` 只作定界符，不要在 `$` 外写 LaTeX 命令。
 
 ## 4. 内容规范（教学部分）
 
 - 中文为主，术语首次出现给英文全称；公式一律给「符号 + 变量释义 + 代入真实数字的算例」三件套。
 - 每个 `ready` 算法至少：1 段直觉、3 步以上推导或流程、6 条以上术语、1 个可调参数组（含会让它失败的极端值）、2 个 visual。
 - 常见坑（`pitfalls`）要具体到「什么现象 → 为什么 → 怎么办」。
+
+### 4.1 讲解写法：三段式，先给画面
+
+每一段 `intuition` / `derivation[].body` 按这个顺序写，缺一段就算没写完：
+
+1. **一个能看见的画面**（类比、物理直觉、日常经验），一句话，别装术语；
+2. **数字落地**：这个画面对应的那几个数算一遍（沿用教案里已验证过的数字，不要另编）；
+3. **指到本页的图上**：说清楚拖哪个滑块、看哪条线/哪个面，会看到什么，为什么。
+
+硬性约束：
+
+- 短句优先，一句话只讲一件事；括号套括号（超过一层）必须拆开。
+- 术语第一次出现，紧跟一句白话；英文全称放括号里。
+- **类比不许引入新数字**。改文风后用 `uv run python tools/check_prose.py` 校验：
+  数字集合必须与 git HEAD 完全一致（少一个 = 改坏了算例，多一个 = 编了数据）。
+- 反例（术语堆叠，没有画面）：「导数 σ′ = σ(1−σ)，最大只有 0.25 —— 也就是说打分极端时梯度几乎为 0，这就是饱和。」
+- 正例（同一件事）：「Sigmoid 是一条中间陡、两头平的 S 形斜坡。坡度就是 σ′ = σ(1−σ)，最陡的坡脚也只有 0.25；z=4 时只剩 0.0177。梯度下降是顺着坡往下滚，坡一旦平下来，就像在冰面上推箱子 —— 这就是「饱和」。把 spread 滑块拉到最大，看 3D 曲面两头那片平台，就是它。」

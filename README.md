@@ -20,6 +20,10 @@ uv sync
 # 1b) 可选：装真训练内核（torch，约几百 MB）；装了之后 MLP/CNN 演示走 autograd，没装自动退回 NumPy
 uv sync --extra ml
 
+# 1c) 可选：装「问助教」能力（qoder-agent-sdk，含一个约 100MB 的 qodercli 子进程）
+uv sync --extra ai
+export QODER_PERSONAL_ACCESS_TOKEN=你的_PAT   # 见下方「逐概念提问」
+
 # 2) 前端依赖与构建（国内镜像）
 cd frontend
 npm --registry=https://registry.npmmirror.com install
@@ -94,12 +98,46 @@ curl -s localhost:8200/api/algorithms/mlp/fit \
   -d '{"params":{"hidden":2,"lr":0.5,"act":0,"data":1},"seed":7,"steps":60}' | head -c 400
 ```
 
+## 逐概念提问（Qoder Agent SDK）
+
+每一段直觉、每一步推导、每一条术语、公式卡的后面都有一个「问助教」按钮，点开就是这一小节的专属问答。
+
+**开通只需要两步**（不配也能整站照常逛，按钮点开会告诉你缺什么）：
+
+```bash
+uv sync --extra ai                                   # 或者 uv sync --all-extras
+export QODER_PERSONAL_ACCESS_TOKEN=...               # PAT：https://qoder.com/account/integrations
+# 也可以不建 PAT，直接在终端跑一次 qodercli login 复用本机登录态
+```
+
+`GET /api/ask/status` 会把「装没装 SDK、有没有凭证、用的哪种方式、当前模型」告诉前端；
+没配凭证时提问入口变灰并显示原因，**不会静默给一个假答案**。
+
+**链路**：`AskPanel.vue` → `POST /api/ask`（SSE）→ `app/api/ask.py` 组装上下文 → `app/ai.py` 调 SDK `query()` → 逐字推回前端，Markdown + KaTeX 渲染。
+
+几条刻意的设计，改之前先看：
+
+1. **上下文由服务端自己取**。前端只发 `{key, section}`（例如 `{"kind":"derivation","index":2}`），
+   正文由 `loader.payload(key)` 查出来 —— 这样没人能靠改请求包体往模型里塞话。
+2. **不给模型任何工具**（`tools=[]`、`max_turns=1`、`cwd` 指向临时目录）。它只回答，不读文件、不跑命令。
+3. **凭证只在环境变量里**，不进前端包、不进仓库、不进日志。
+4. 学生当前的滑块值会作为上下文一起发（越界的先按 `catalog.py` 的规格钳制），所以能问出
+   「我把 γ 拖到 8 之后为什么边界开始抖」这种问题。
+5. 每次提问是独立的一次性调用（无状态），面板里的连续感靠回传最近 4 轮问答实现。
+
+**成本**：一次问答是一次真实的模型调用，会花额度；`done` 帧里带 `duration_ms` 与 `total_cost_usd`，
+答案下方会显示「1.2s · 约 $0.0042」。用 `QODER_MODEL` 环境变量换模型（默认 `auto`）。
+
 ## 测试
 
 ```bash
-uv run pytest            # 内容一致性 + 数值正确性 + HTTP 契约
-uv run ruff check app tests
+uv run pytest            # 内容一致性 + 数值正确性 + HTTP 契约 + LaTeX 转录 + /api/ask
+uv run ruff check app tests tools
+uv run python -m tools.probe                    # 10 个算法 × 滑块极端值：无缺失 visual、无 NaN
+uv run python tools/check_prose.py              # 改文风前后：讲解正文的数字必须一致
 cd frontend && npm run typecheck && npm run build
+cd frontend && node ../tools/check_tex.mjs      # 全站每条公式都过一遍 KaTeX 严格模式
+uv run python -m tools.make_fixtures            # 教案/契约变了就重新生成离线 fixture
 ```
 
 ## 设计与教学约定（改动前请读）
@@ -111,7 +149,13 @@ cd frontend && npm run typecheck && npm run build
 3. **图形不得互相遮挡**：绘制顺序固定为 连线 → 实体 → 坐标轴 → 文字（带半透明底板衬底）；
    标签要按索引错开，浮窗要自动避让视口边缘。
 4. 前端有 **mock 兜底**：后端未启动时用 `frontend/src/fixtures/*.json` 照常演示，并在界面顶部标注「离线演示数据」。
-5. 站点只监听 `127.0.0.1`，不涉及远程访问。
+5. **公式一律 KaTeX**（本地打包，不引 CDN）。教案原文继续写可读的 Unicode（`ŷᵢ²ᵀΣ`），
+   由 `app/content/tex.py` 转录成 LaTeX；转录不了的字符宁可回退成等宽原文也不猜，
+   歧义的（比如 `Σ` 到底是求和号还是协方差矩阵）就在教案里手写 `"latex"` 字段。
+   正文里的行内公式用 `$...$`，独立公式用 `$$...$$`。详见 `docs/API-CONTRACT.md` §3.5、§4.1。
+6. **讲解正文写三段式**：一个看得见的画面 → 用本页已实测的数字算一遍 → 指到交互图上拖哪个滑块。
+   改文风前后跑 `tools/check_prose.py`，数字不许动。
+7. 站点只监听 `127.0.0.1`，不涉及远程访问。
 
 ## CI
 
@@ -125,3 +169,6 @@ cd frontend && npm run typecheck && npm run build
 - t-SNE 是 O(n²) 实现，样本量固定在 140~200；不是用来跑真数据的。
 - SVM 走 primal 简化求解，大规模/难分数据上的表现不代表真实库（如 LIBSVM）的实现质量。
 - PyTorch 是可选 extra：未安装时深度学习页会退回纯 NumPy 手写实现（数学口径一致，但速度较慢）。
+- 「问助教」要额外装 `--extra ai` 并且有凭证；离线演示模式（顶栏开关）下不可用，界面会说明原因。
+  每次提问是一次真实模型调用，会消耗账号额度。
+- 「问助教」的答案没有人工审核，站内不做正确性兜底；正文（教案）才是校对过的那一份。

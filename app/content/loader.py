@@ -12,10 +12,41 @@ from functools import lru_cache
 from typing import Any
 
 from app.content import catalog
+from app.content.tex import TexError, to_latex_display
 
 _PKG = "app.content.lessons"
 
 REQUIRED_TEXT = ("name", "tagline", "story", "intuition", "derivation", "terms")
+
+
+@lru_cache(maxsize=512)
+def _tex(text: str) -> str:
+    """教案原文是 Unicode，转录成 LaTeX；转不动就返回空串让前端回退。"""
+    try:
+        return to_latex_display(text) if text and text.strip() else ""
+    except TexError:
+        return ""
+
+def _latexify(obj: dict[str, Any]) -> dict[str, Any]:
+    """给公式卡补 latex：作者手写的优先，程序转录的兜底。"""
+    out = dict(obj)
+    text = str(out.get("text") or "")
+    out["latex"] = str(out.get("latex") or "") or _tex(text)
+    out["vars"] = [
+        {**v, "latex": str(v.get("latex") or "") or _tex(str(v.get("sym") or ""))}
+        for v in out.get("vars") or []
+    ]
+    return out
+
+
+def _latexify_steps(steps: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    out = []
+    for step in steps:
+        d = dict(step)
+        if d.get("formula"):
+            d["latex"] = str(d.get("latex") or "") or _tex(str(d["formula"]))
+        out.append(d)
+    return out
 
 
 @lru_cache(maxsize=1)
@@ -68,9 +99,9 @@ def payload(key: str) -> dict[str, Any]:
         "tags": item["tags"],
         "tagline": lesson.get("tagline", ""),
         "story": lesson.get("story", ""),
-        "formula": lesson.get("formula", {"text": "", "vars": []}),
+        "formula": _latexify(lesson.get("formula", {"text": "", "vars": []})),
         "intuition": lesson.get("intuition", []),
-        "derivation": lesson.get("derivation", []),
+        "derivation": _latexify_steps(lesson.get("derivation", [])),
         "terms": lesson.get("terms", []),
         "pitfalls": lesson.get("pitfalls", []),
         "seeAlso": lesson.get("seeAlso", []),

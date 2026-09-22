@@ -211,6 +211,109 @@ export async function step(key: string, req: FitRequest, signal?: AbortSignal): 
   )
 }
 
+/* ------------------------------------------------------ 逐概念提问（SSE） */
+
+export interface AskStatus {
+  ready: boolean
+  sdkInstalled?: boolean
+  mode?: 'pat' | 'qodercli'
+  model?: string
+  reason?: string
+  note?: string
+}
+
+export interface AskPayload {
+  key: string
+  section: Record<string, unknown>
+  question: string
+  params?: Record<string, number>
+  history?: Array<{ role: 'user' | 'assistant'; text: string }>
+}
+
+export type AskEvent =
+  | { type: 'delta'; text: string }
+  | { type: 'done'; turns?: number; ms?: number; costUsd?: number | null }
+  | { type: 'error'; message: string }
+
+/** 全站共享一次状态探测：每张概念卡都问一遍会白起子进程 */
+export const askState = reactive({
+  status: null as AskStatus | null,
+  probing: false,
+})
+
+export async function loadAskStatus(force = false, signal?: AbortSignal): Promise<AskStatus> {
+  if (askState.status && !force) return askState.status
+  if (backendState.forceMock) {
+    askState.status = { ready: false, reason: '当前是「离线演示数据」模式，提问需要连后端。把顶栏的离线开关关掉。' }
+    return askState.status
+  }
+  askState.probing = true
+  try {
+    askState.status = await request<AskStatus>('/ask/status', { timeoutMs: 15000, signal })
+  } catch (e) {
+    askState.status = {
+      ready: false,
+      reason: `连不上后端（${e instanceof Error ? e.message : String(e)}），提问需要 FastAPI 在跑。`,
+    }
+  } finally {
+    askState.probing = false
+  }
+  return askState.status
+}
+
+/**
+ * 流式提问。用 fetch + ReadableStream 而不是 EventSource：EventSource 只能 GET，
+ * 而这里要 POST 一段不小的上下文。后端没配凭证时走 503 JSON，也归一化成 error 事件。
+ */
+export async function askStream(payload: AskPayload, onEvent: (e: AskEvent) => void, signal?: AbortSignal): Promise<void> {
+  const res = await fetch(`${API_BASE}/ask`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'text/event-stream', 'X-Backend': 'live' },
+    body: JSON.stringify(payload),
+    signal,
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => null)
+    const detail = typeof body?.detail === 'string' && body.detail ? body.detail : `HTTP ${res.status}`
+    onEvent({ type: 'error', message: detail })
+    return
+  }
+  if (!res.body) {
+    onEvent({ type: 'error', message: '这条连接没有返回可读的流' })
+    return
+  }
+  const reader = res.body.getReader()
+  const dec = new TextDecoder()
+  let buf = ''
+  for (;;) {
+    const { value, done } = await reader.read()
+    if (done) break
+    buf += dec.decode(value, { stream: true })
+    // 一帧以空行结尾；半截留在 buf 里等下一个 chunk
+    for (;;) {
+      const at = buf.indexOf('\n\n')
+      if (at < 0) break
+      const frame = buf.slice(0, at)
+      buf = buf.slice(at + 2)
+      const line = frame.split('\n').find((l) => l.startsWith('data: '))
+      if (!line) continue
+      try {
+        onEvent(JSON.parse(line.slice(6)) as AskEvent)
+      } catch {
+        onEvent({ type: 'error', message: `收到一帧解析不了的返回：${line.slice(6, 80)}` })
+      }
+    }
+  }
+  const rest = buf.trim()
+  if (rest.startsWith('data: ')) {
+    try {
+      onEvent(JSON.parse(rest.slice(6)) as AskEvent)
+    } catch {
+      /* 流被掐断的半帧，丢掉 */
+    }
+  }
+}
+
 /* ------------------------------------------------------ 参数面板的小工具 */
 
 /** 契约 §1：请求里未给的参数用 `params[].default` */

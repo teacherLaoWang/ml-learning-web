@@ -16,6 +16,9 @@ dependencies = [
 ml = [
     "torch>=2.2.0",
 ]
+ai = [
+    "qoder-agent-sdk>=1.0.14",
+]
 
 [dependency-groups]
 dev = [

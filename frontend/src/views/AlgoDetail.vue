@@ -15,6 +15,8 @@ import ParamsPanel from '../components/ParamsPanel.vue'
 import StepPlayer from '../components/StepPlayer.vue'
 import MetricsStrip from '../components/MetricsStrip.vue'
 import FormulaCard from '../components/FormulaCard.vue'
+import KatexChip from '../components/KatexChip.vue'
+import AskPanel from '../components/AskPanel.vue'
 import TableCard from '../components/TableCard.vue'
 import LessonText from '../components/LessonText.vue'
 import TermTip from '../components/TermTip.vue'
@@ -309,18 +311,22 @@ const missing = computed(() => algo.value?.missingText ?? [])
       <!-- ================================================== 左：教案 -->
       <div class="lesson">
         <section id="story" class="card sec">
-          <h2>故事</h2>
+          <h2>故事 <AskPanel class="h2-ask" :algo-key="algo.key" :section="{ kind: 'story' }" label="故事" :params="params" /></h2>
           <p v-if="algo.story"><LessonText :text="algo.story" /></p>
           <p v-else class="tiny muted">（这篇教案的正文还没写：后端 app/content/lessons/{{ algo.key }}.py 缺 story）</p>
         </section>
 
         <div id="formula" class="sec">
           <FormulaCard :formula="algo.formula" />
+          <AskPanel class="item-ask" :algo-key="algo.key" :section="{ kind: 'formula' }" label="公式" :params="params" />
         </div>
 
         <section v-if="algo.intuition?.length" id="intuition" class="card sec">
           <h2>直觉</h2>
-          <p v-for="(p, i) in algo.intuition" :key="i"><LessonText :text="p" /></p>
+          <p v-for="(p, i) in algo.intuition" :key="i">
+            <LessonText :text="p" />
+            <AskPanel class="item-ask" :algo-key="algo.key" :section="{ kind: 'intuition', index: i }" :label="`直觉 · 第 ${i+1} 段`" :params="params" />
+          </p>
         </section>
 
         <section v-if="algo.derivation?.length" id="derivation" class="card sec">
@@ -329,7 +335,8 @@ const missing = computed(() => algo.value?.missingText ?? [])
             <li v-for="(d, i) in algo.derivation" :key="i">
               <b>{{ d.title || `第 ${i + 1} 步` }}</b>
               <p class="small"><LessonText :text="d.body" /></p>
-              <p v-if="d.formula" class="mono f-line">{{ d.formula }}</p>
+              <KatexChip v-if="d.formula" display class="f-line" :latex="d.latex" :fallback="d.formula" />
+              <AskPanel class="item-ask" :algo-key="algo.key" :section="{ kind: 'derivation', index: i }" :label="`推导 · 第 ${i+1} 步`" :params="params" />
             </li>
           </ol>
         </section>
@@ -337,7 +344,10 @@ const missing = computed(() => algo.value?.missingText ?? [])
         <section v-if="algo.pitfalls?.length" id="pitfalls" class="card sec">
           <h2>常见坑</h2>
           <ul class="pits">
-            <li v-for="(p, i) in algo.pitfalls" :key="i"><LessonText :text="p" /></li>
+            <li v-for="(p, i) in algo.pitfalls" :key="i">
+              <LessonText :text="p" />
+              <AskPanel class="item-ask" :algo-key="algo.key" :section="{ kind: 'pitfall', index: i }" :label="`常见坑 · 第 ${i+1} 条`" :params="params" />
+            </li>
           </ul>
         </section>
 
@@ -371,6 +381,7 @@ const missing = computed(() => algo.value?.missingText ?? [])
               <div v-for="t in algo.terms" :key="t.term" class="term-row">
                 <TermTip :term="t.term" :full="t.full" :explain="t.explain"><b>{{ t.term }}</b></TermTip>
                 <span class="tiny muted">{{ t.explain }}</span>
+                <AskPanel class="item-ask" :algo-key="algo.key" :section="{ kind: 'term', term: t.term }" :label="`术语 · ${t.term}`" :params="params" />
               </div>
             </div>
           </details>
@@ -564,6 +575,11 @@ const missing = computed(() => algo.value?.missingText ?? [])
 .steps p {
   margin: 2px 0;
   color: var(--ink-2);
+}
+.item-ask {
+  display: inline-block;
+  margin-left: 4px;
+  vertical-align: 1px;
 }
 .f-line {
   margin: 2px 0 0;

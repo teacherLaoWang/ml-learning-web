@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import { router } from './router'
+import 'katex/dist/katex.min.css'
 import './styles/base.css'
 import { loadGlossary } from './composables/useGlossary'
 
