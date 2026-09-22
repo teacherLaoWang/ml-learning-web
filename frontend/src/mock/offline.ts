@@ -22,7 +22,9 @@ import specsJson from '../fixtures/_meta/specs.json'
 import lessonsJson from '../fixtures/_meta/lessons.json'
 
 interface MetaItem extends CatalogItem {
-  concept?: { story?: string; intuition?: string[]; pitfalls?: string[] }
+  concept?: { story?: string; intuition?: string[]; pitfalls?: string[]; seeAlso?: string[];
+    formula?: { text: string; vars?: Array<{ sym: string; zh: string }> };
+    terms?: Array<{ term: string; full?: string; explain: string }> }
 }
 
 const META = catalogJson as unknown as { env: EnvInfo; families: Array<Omit<Family, 'items'> & { items: MetaItem[] }> }
@@ -32,6 +34,13 @@ const SPECS = specsJson as unknown as {
   metricSpecs: Record<string, MetricSpec[]>
 }
 const LESSONS = lessonsJson as unknown as Record<string, Omit<Algorithm, 'key' | 'family' | 'status'>>
+
+type ConceptPack = NonNullable<MetaItem['concept']>
+/** outline 概念卡片的文字（≈110KB）单独成一个懒加载 chunk，不进主包 */
+let CONCEPTS: Record<string, ConceptPack> = {}
+void import('../fixtures/_meta/concepts.json')
+  .then((m) => { CONCEPTS = (m.default ?? m) as unknown as Record<string, ConceptPack> })
+  .catch(() => { /* 拿不到就退化成只有标题的概念卡片 */ })
 
 /** 只在浏览器里用：{key} → 懒加载 fixture（不进主包） */
 const fixtureLoaders = import.meta.glob('../fixtures/*.json') as Record<string, () => Promise<{ default: FitResult }>>
@@ -173,7 +182,7 @@ export function offlineAlgorithm(key: string): Algorithm {
   const lesson = lessonOf(key)
   const family = found?.family
   const item = found?.item
-  const concept = item?.concept
+  const concept = item?.concept ?? CONCEPTS[key]
   const isReady = !!item && item.status === 'ready'
   const base: Algorithm = {
     key,
@@ -186,12 +195,12 @@ export function offlineAlgorithm(key: string): Algorithm {
     tags: item?.tags ?? [],
     tagline: lesson?.tagline ?? concept?.story?.slice(0, 46) ?? item?.tagline ?? '',
     story: lesson?.story ?? concept?.story ?? '',
-    formula: lesson?.formula ?? { text: '', vars: [] },
+    formula: lesson?.formula ?? concept?.formula ?? { text: '', vars: [] },
     intuition: lesson?.intuition ?? concept?.intuition ?? [],
     derivation: lesson?.derivation ?? [],
-    terms: lesson?.terms ?? [],
+    terms: lesson?.terms ?? concept?.terms ?? [],
     pitfalls: lesson?.pitfalls ?? concept?.pitfalls ?? [],
-    seeAlso: lesson?.seeAlso ?? [],
+    seeAlso: lesson?.seeAlso ?? concept?.seeAlso ?? [],
     quiz: lesson?.quiz ?? null,
     params: isReady ? (SPECS.paramSpecs[key] ?? []) : [],
     presets: lesson?.presets ?? [],

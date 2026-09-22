@@ -43,6 +43,14 @@ cd frontend && npm run dev                            # 终端 B → http://127.
 自检：`uv run python -m tools.probe`（把 10 个 ready 算法各跑一遍，检查 visual 是否齐全、
 有没有 NaN/Inf/非 JSON 类型、返回体积与耗时），加 `--sweep` 会把每个参数的上下端点都跑一遍。
 
+离线演示的数据（`frontend/src/fixtures/*.json` 与 `_meta/`）**由后端生成，不要手改**：
+
+```bash
+uv run python -m tools.make_fixtures     # 改了 app/ml/** 的返回结构后必须重跑
+```
+
+`tests/test_fixtures.py` 会比对 fixture 与真实 `/fit` 响应的结构，一旦漂移测试就红。
+
 只想起后端先看数据接口：访问 `http://127.0.0.1:8200/docs`（FastAPI 自带 Swagger）。
 
 ## 目录结构
