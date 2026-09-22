@@ -132,6 +132,8 @@ const barModel = computed(() => {
   const span = vmax - vmin || 1
   const n = Math.max(1, labels.length)
   const slot = PLOT_W / n
+  // 柱子一多，逐根标标签和数值会糊成一片（残差图有 48 根，槽宽只有 12px）
+  const labelEvery = Math.max(1, Math.ceil(n / 12))
   const bw = Math.max(6, Math.min(58, slot * 0.66))
   const y0 = PAD.t + PLOT_H - ((0 - vmin) / span) * PLOT_H
   const bars = labels.map((label, i) => {
@@ -139,6 +141,7 @@ const barModel = computed(() => {
     const py = PAD.t + PLOT_H - ((v - vmin) / span) * PLOT_H
     return {
       label: String(label),
+      showLabel: i % labelEvery === 0,
       value: v,
       x: PAD.l + slot * i + (slot - bw) / 2,
       w: bw,
@@ -280,13 +283,6 @@ const tooltipStyle = computed(() => {
           {{ lineModel.yLabel }}
         </text>
 
-        <g class="legend">
-          <template v-for="(c, i) in lineModel.curves" :key="`lg${c.id}`">
-            <rect :x="PAD.l + i * 132" :y="6" width="10" height="4" rx="2" :fill="c.color" />
-            <text :x="PAD.l + i * 132 + 14" :y="11">{{ c.label }}</text>
-          </template>
-        </g>
-
         <rect
           :x="PAD.l"
           :y="PAD.t"
@@ -317,10 +313,10 @@ const tooltipStyle = computed(() => {
             @mousemove="hover = { x: b.x + b.w / 2, y: b.y - 6, lines: [b.label, `${fmtNum(b.value, 4)}${barModel.unit}`] }"
             @mouseleave="hover = null"
           />
-          <text :x="b.x + b.w / 2" :y="b.y - 5" text-anchor="middle" class="bar-value">
+          <text v-if="b.showLabel" :x="b.x + b.w / 2" :y="b.y - 5" text-anchor="middle" class="bar-value">
             {{ clamp(progress * barModel.bars.length - i, 0, 1) > 0.5 ? fmtNum(b.value, 3) : '' }}
           </text>
-          <text :x="b.x + b.w / 2" :y="H - PAD.b + 15" text-anchor="middle" class="bar-label">{{ b.label }}</text>
+          <text v-if="b.showLabel" :x="b.x + b.w / 2" :y="H - PAD.b + 15" text-anchor="middle" class="bar-label">{{ b.label }}</text>
         </g>
         <text :x="14" :y="PAD.t + PLOT_H / 2" text-anchor="middle" class="axis-name" :transform="`rotate(-90 14 ${PAD.t + PLOT_H / 2})`">
           {{ barModel.yLabel }}
@@ -367,6 +363,15 @@ const tooltipStyle = computed(() => {
         </text>
       </template>
     </svg>
+
+    <!-- 图例改成 HTML：SVG 里固定 132px 间距，长标签（如「RBF 核：训练误差 vs log₁₀γ」）
+         会互相叠字并被 viewBox 裁掉；flex-wrap 在任何宽度下都能自动换行 -->
+    <div v-if="lineModel" class="legend-html">
+      <span v-for="c in lineModel.curves" :key="`lh${c.id}`" class="li">
+        <i class="sw" :class="{ dash: c.dash }" :style="{ background: c.dash ? undefined : c.color, borderColor: c.color }" />
+        {{ c.label }}
+      </span>
+    </div>
 
     <div v-if="hover" class="chart-tip" :style="tooltipStyle">
       <div v-for="(l, i) in hover.lines" :key="i">{{ l }}</div>
@@ -423,8 +428,31 @@ const tooltipStyle = computed(() => {
   font-family: var(--mono);
   z-index: 4;
 }
-.legend text {
-  font-size: 11px;
+.legend-html {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 14px;
+  padding: 4px 2px 0;
+  font-size: 11.5px;
+  color: var(--ink-2);
+}
+.legend-html .li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+.legend-html .sw {
+  width: 14px;
+  height: 4px;
+  border-radius: 2px;
+  display: inline-block;
+  flex: none;
+}
+.legend-html .sw.dash {
+  height: 0;
+  background: none !important;
+  border-top: 2px dashed currentColor;
 }
 .chart-skeleton {
   padding: 8px 0;

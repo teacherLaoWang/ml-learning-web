@@ -396,6 +396,13 @@ export class SceneEngine {
     canvas.removeEventListener('webglcontextlost', this.onContextLost)
     this.controls.dispose()
     this.renderer.dispose()
+    // 只 dispose 不会把 WebGL 上下文交还给浏览器：连开十几个 3D 面板就会撞上内核数上限
+    // （控制台 "Too many active WebGL contexts"，最早的上下文被判 lost 后面板直接黑掉）
+    try {
+      this.renderer.forceContextLoss()
+    } catch {
+      /* 拿不到 WEBGL_lose_context 扩展时忽略，dispose 已经释放了大部分资源 */
+    }
     if (canvas.parentElement === this.container) this.container.removeChild(canvas)
     const bg = this.scene.background
     if (bg instanceof THREE.Texture) bg.dispose()

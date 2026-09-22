@@ -441,14 +441,15 @@ export function buildFloorAndAxes(frame: PlotFrame, axes: AxesOptions, addLabel:
     style: { bold: true, heightPx: 19 },
   })
   const zt = tickValues?.z ?? ticksOf({ label: '', min: zmin, max: zmaxOf(frame) }, nTicks)
-  for (const x of xt.slice(0, 4)) {
+  // 三条轴的刻度文字共用一个角点，lane 必须各不相同，否则第一个刻度必然叠字
+  for (const x of xt.slice(0, 5)) {
     addLabel(fmtTick(x), frame.toScene(x, ymin, zmin), { lane: 1, style: { fontSize: 20, heightPx: 13, bold: false, plateColor: 'rgba(255,255,255,0.8)' } })
   }
-  for (const y of yt.slice(0, 4)) {
-    addLabel(fmtTick(y), frame.toScene(xmin, y, zmin), { lane: 1, style: { fontSize: 20, heightPx: 13, bold: false, plateColor: 'rgba(255,255,255,0.8)' } })
+  for (const y of yt.slice(0, 5)) {
+    addLabel(fmtTick(y), frame.toScene(xmin, y, zmin), { lane: 2, style: { fontSize: 20, heightPx: 13, bold: false, plateColor: 'rgba(255,255,255,0.8)' } })
   }
-  for (const z of zt.slice(0, 4)) {
-    addLabel(fmtTick(z), frame.toScene(xmin, ymin, z), { lane: 2, style: { fontSize: 20, heightPx: 13, bold: false, plateColor: 'rgba(255,255,255,0.8)' } })
+  for (const z of zt.slice(0, 5)) {
+    addLabel(fmtTick(z), frame.toScene(xmin, ymin, z), { lane: 3, style: { fontSize: 20, heightPx: 13, bold: false, plateColor: 'rgba(255,255,255,0.8)' } })
   }
   return g
 }

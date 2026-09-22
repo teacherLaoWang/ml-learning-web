@@ -49,13 +49,29 @@ const maxFrame = computed(() => Math.max(0, Math.min(steps.value, trained.value 
 const specsForStage = computed(() => algo.value?.visuals ?? [])
 const visualData = computed(() => result.value?.visuals ?? [])
 
+/** 取有限值的真实范围并加 8% 余量；退化（全相等/空）时给一个可用的窗口 */
+function paddedExtent(vals: number[] | undefined, fallback: [number, number] = [0, 1]): [number, number] {
+  const arr = (vals ?? []).filter((v) => Number.isFinite(v))
+  if (!arr.length) return fallback
+  let lo = Math.min(...arr)
+  let hi = Math.max(...arr)
+  if (hi - lo < 1e-9) {
+    const pad = Math.max(Math.abs(hi) * 0.1, 1e-3)
+    return [lo - pad, hi + pad]
+  }
+  const pad = (hi - lo) * 0.08
+  lo -= pad
+  hi += pad
+  return [lo, hi]
+}
+
 /** series[] 复用同一个折线组件：合成 line2d 负载 */
 const seriesVisuals = computed<Line2DVisual[]>(() =>
   (result.value?.series ?? []).map((s: SeriesRow) => {
-    const xmin = Math.min(...s.x, 0)
-    const xmax = Math.max(...s.x, 1)
-    const ymin = Math.min(...s.y, 0)
-    const ymax = Math.max(...s.y, 1)
+    // 用数据自身范围（含 8% 余量），不要强行含 0 和 1：
+    // 否则验证误差 0.15~0.17 这种窄区间会被压成贴边直线，图就白画了
+    const [xmin, xmax] = paddedExtent(s.x)
+    const [ymin, ymax] = paddedExtent(s.y)
     return {
       id: `series-${s.id}`,
       kind: 'line2d',
@@ -105,18 +121,24 @@ async function stepOnce(): Promise<void> {
     return
   }
   if (trained.value >= 400 || busy.value) return
+  ctrl?.abort()
+  const my = new AbortController()
+  ctrl = my
   busy.value = true
   fitError.value = ''
   try {
     const target = Math.min(400, trained.value + 10)
-    const r = await step(key.value, { params: params.value, seed: seed.value, steps: target })
+    const r = await step(key.value, { params: params.value, seed: seed.value, steps: target }, my.signal)
+    if (my.signal.aborted) return
     result.value = r
     trained.value = r.steps || target
     frame.value = clamp(frame.value + 1, 0, Math.max(0, trained.value - 1))
   } catch (e) {
+    if (e instanceof DOMException && e.name === 'AbortError') return
     fitError.value = e instanceof Error ? e.message : String(e)
+    result.value = null
   } finally {
-    busy.value = false
+    if (ctrl === my) busy.value = false
   }
 }
 
@@ -141,7 +163,9 @@ async function loadLesson(): Promise<void> {
   frame.value = 0
   playing.value = false
   try {
-    const a = await getAlgorithm(key.value)
+    const k = key.value
+    const a = await getAlgorithm(k)
+    if (key.value !== k) return // 连点两个算法时，旧响应不能覆盖新页
     algo.value = a
     params.value = defaultsFrom(a.params ?? [])
     await run()
@@ -173,8 +197,12 @@ watch(key, () => void loadLesson())
 function onKey(ev: KeyboardEvent) {
   const target = ev.target as HTMLElement | null
   if (target && /input|textarea|select/i.test(target.tagName)) return
+  // Cmd/Ctrl+R 是「刷新页面」，不该被当成重跑；Alt 同理
+  if (ev.metaKey || ev.ctrlKey || ev.altKey) return
   if (!hasSim.value) return
   if (ev.code === 'Space') {
+    // 焦点在按钮上时空格属于该按钮（例如「应用并重跑」），不能同时再触发播放
+    if (target && /button/i.test(target.tagName)) return
     ev.preventDefault()
     playing.value = !playing.value
   } else if (ev.key === 'ArrowRight') {
@@ -205,6 +233,10 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKey)
   ctrl?.abort()
 })
+
+function scrollToSection(id: string): void {
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 /* ---------------------------------------------------------- 教案小工具 */
 
@@ -261,7 +293,10 @@ const missing = computed(() => algo.value?.missingText ?? [])
           </div>
         </div>
         <nav class="toc">
-          <a v-for="n in nav" :key="n.id" :href="`#${n.id}`" class="tiny">{{ n.label }}</a>
+          <!-- 路由是 hash 模式，用 #id 锚点会把整条路由换掉；这里改成脚本滚动 -->
+          <button v-for="n in nav" :key="n.id" type="button" class="tiny toc-link" @click="scrollToSection(n.id)">
+            {{ n.label }}
+          </button>
         </nav>
       </div>
       <p v-if="backendState.mode === 'mock' && hasSim" class="tiny mockline">
@@ -475,15 +510,18 @@ const missing = computed(() => algo.value?.missingText ?? [])
   flex-wrap: wrap;
   align-content: flex-start;
 }
-.toc a {
+.toc a,
+.toc .toc-link {
   padding: 3px 9px;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: var(--panel-2);
   color: var(--ink-2);
   font-weight: 650;
+  cursor: pointer;
 }
-.toc a:hover {
+.toc a:hover,
+.toc .toc-link:hover {
   text-decoration: none;
   border-color: var(--accent);
   color: var(--accent);

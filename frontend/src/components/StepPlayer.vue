@@ -54,6 +54,9 @@ watch(
   (v) => {
     if (pos.value > v) {
       pos.value = v
+      // 必须回写给父组件：否则 fill / 「frame x / y」继续读越界的 props.frame，
+      // 会出现 149/59 这种读数与 250% 的进度条
+      emit('update:frame', v)
       emit('update:playing', false)
     }
   },
@@ -86,8 +89,9 @@ function stepOnce() {
   emit('update:playing', false)
   emit('step')
 }
-const fillPct = computed(() => `${(props.frame / Math.max(1, props.maxFrame)) * 100}%`)
-const atEnd = computed(() => props.frame >= props.maxFrame)
+const shownFrame = computed(() => Math.min(props.frame, props.maxFrame))
+const fillPct = computed(() => `${(shownFrame.value / Math.max(1, props.maxFrame)) * 100}%`)
+const atEnd = computed(() => shownFrame.value >= props.maxFrame)
 </script>
 
 <template>

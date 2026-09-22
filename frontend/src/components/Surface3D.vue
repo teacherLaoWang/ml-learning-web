@@ -29,6 +29,13 @@ function rebuild() {
   const e = engine.value
   const data = props.visual?.data
   if (!e || !data?.grid) return
+  // 构造期就会读 axes.x/.y/.z，缺范围值会直接抛错、整块面板空白 —— 这里先挡掉并留提示
+  const ax = data.axes ?? ({} as typeof data.axes)
+  const ok = [ax?.x, ax?.y, ax?.z].every((r) => r && Number.isFinite(r.min) && Number.isFinite(r.max))
+  if (!ok) {
+    console.warn('[Surface3D] visual 缺少可用的 axes 范围，已跳过渲染：', props.visual?.id)
+    return
+  }
   world = new SurfaceWorld(e, data, { progress: () => props.progress })
 }
 

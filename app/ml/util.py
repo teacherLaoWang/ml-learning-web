@@ -225,7 +225,9 @@ def curve(cid: str, label: str, x: Any, y: Any, dash: bool = False,
     xs = [round(float(v), ND) for v in np.asarray(x, dtype=float).ravel()]
     ys = [round(float(v), ND) for v in np.asarray(y, dtype=float).ravel()]
     return {"id": cid, "label": label, "x": xs, "y": ys, "dash": bool(dash),
-            "color": color or color_of(hash(cid) % len(PALETTE))}
+            # 不能用 hash()：字符串 hash 每个进程都不同（PYTHONHASHSEED），
+            # 会让折线配色每次重启就变、也和 fixtures 里定死的颜色不一致
+            "color": color or color_of(sum(ord(ch) for ch in str(cid)) % len(PALETTE))}
 
 
 def lines2d(curves: list[dict[str, Any]], xlab: str, ylab: str,

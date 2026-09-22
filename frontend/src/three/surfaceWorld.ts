@@ -51,6 +51,7 @@ export class SurfaceWorld {
   private headLabel: ReturnType<SceneEngine['addLabel']> | null = null
   private headText = ''
   private win: WinState | null = null
+  private headTick = 0   // 播放头读数节流计数器
 
   constructor(
     private engine: SceneEngine,
@@ -328,8 +329,10 @@ void main(){
 
   private tick(time: number) {
     for (const mat of this.contourMats) mat.uniforms.uPhase.value = (time * 0.16) % 1
-    if (!this.trailMat || !this.samples.length) return
     const progress = clamp(this.hooks.progress(), 0, 1)
+    // 卷积滑动框不依赖轨迹：cnn 的两个曲面没有 path，若放在下面的早返回之后就永远停在原位
+    if (this.win) this.placeWindow(progress * this.win.cols * this.win.rows)
+    if (!this.trailMat || !this.samples.length) return
     this.trailMat.uniforms.uHead.value = progress
     const head = this.headAt(progress)
     if (this.ball) this.ball.position.copy(head.pos).addScaledVector(UP, 0.014)
@@ -350,12 +353,14 @@ void main(){
     }
     if (this.headLabel && point) {
       const text = `t=${Math.round(safeNum(point.step, 0))} · L=${fmtNum(point.z, 3)}`
-      if (text !== this.headText) {
+      // 重建一次标签 = 两张 canvas + 一张 CanvasTexture；播放时逐帧重建是最主要的掉帧与 GC 来源，
+      // 所以每 4 帧才更新一次读数（肉眼看不出差别）
+      this.headTick = (this.headTick + 1) % 4
+      if (text !== this.headText && this.headTick === 0) {
         this.headText = text
         this.headLabel.setText(text)
       }
     }
-    if (this.win) this.placeWindow(progress * this.win.cols * this.win.rows)
   }
 
   dispose() {
